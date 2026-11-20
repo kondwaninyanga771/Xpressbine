@@ -2,7 +2,40 @@
 
 Lusaka marketplace API for booking local, in-person trades (plumbers, electricians, cleaners and others). Payments are mock mobile money held in an escrow ledger. Amounts are Zambian kwacha (K).
 
-This is the full first API version: bookings, escrow, refunds, a 48-hour auto-release job, client-absent safeguards, a Business Wallet, and a Filament admin panel. A React or Inertia frontend can sit on top later.
+This is the full first API version: bookings, escrow, refunds, a 48-hour auto-release job, client-absent safeguards, a Business Wallet, and a Filament admin panel. A React + Inertia frontend sits on the same app and calls this API.
+
+## Web app
+
+The screens at `/` are React, rendered by Inertia and built with Vite. They do not duplicate booking or escrow rules. Each screen calls the JSON API with the Sanctum bearer token from `POST /api/login` (kept in the browser). Filament stays at `/admin`.
+
+```bash
+npm install
+npm run build
+php artisan serve
+```
+
+During development, `npm run dev` as well as `php artisan serve`.
+
+| Screen | API |
+| --- | --- |
+| Feed, discover, map, provider profile | `GET /api/providers`, `GET /api/providers/{id}`, `GET /api/providers/{id}/ratings`, `GET /api/categories` |
+| Problem estimate | `POST /api/ai/estimate` |
+| Register and login | `POST /api/register`, `POST /api/login`, `GET /api/me` |
+| Book, pay, track, rate | `/api/bookings` and the pay, accept, start, complete, confirm, cancel, ratings, ledger, dispute and photo routes |
+| Provider dashboard | `/api/provider/profile`, `/api/provider/packages`, `/api/provider/photos`, `/api/provider/earnings` |
+| Business wallet | `GET /api/business`, wallet top-up and statement |
+| Trust desk (`/ops`) | `GET /api/admin/providers`, verify, reject, `GET /api/admin/disputes`, resolve |
+
+Not built, because the API does not have it yet, or it was left out of this pass:
+
+- In-app chat. `/messages` lists people from real bookings. The thread is a browser-only preview and is labelled as such.
+- Job requests and quotes.
+- Appeals, warnings, suspensions and bans (the API and Filament still do these).
+- The notifications list.
+- Monthly plans, FinOps forecasts, PDF reports and WhatsApp.
+- A real Airtel, MTN or Zamtel charge. Pay calls the existing mock escrow endpoint.
+
+SQLite search does not return `distance_km` (it uses a bounding box, and the provider show distance query is Haversine SQL). Cards calculate kilometres from the latitude and longitude already on the provider user. The show request does not send coordinates, so that SQL is not run on SQLite.
 
 ## Setup
 

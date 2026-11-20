@@ -9,6 +9,8 @@ use App\Http\Resources\LedgerEntryResource;
 use App\Http\Resources\RatingResource;
 use App\Models\Booking;
 use App\Models\Package;
+use App\Models\ProviderProfile;
+use App\Models\Rating;
 use App\Services\BookingService;
 use App\Services\EscrowService;
 use App\Services\RatingService;
@@ -190,7 +192,7 @@ class BookingController extends Controller
 
     public function providerRatings(ProviderProfile $provider): AnonymousResourceCollection
     {
-        $ratings = \App\Models\Rating::query()
+        $ratings = Rating::query()
             ->where('ratee_id', $provider->user_id)
             ->with('rater')
             ->latest()

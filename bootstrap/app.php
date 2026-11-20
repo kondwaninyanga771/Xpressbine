@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
             'active' => EnsureAccountActive::class,
         ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(
