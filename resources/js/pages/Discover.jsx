@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { api, firstError, listOf, qs } from '../api';
 import { useAuth } from '../auth';
-import { Alert, Logo, PageHead, ProviderCard, RequireAuth, Shell, ViewToggle } from '../components/ui';
+import { Alert, PageHead, ProviderCard, RequireAuth, Shell, ViewToggle } from '../components/ui';
 import { areaByName, AREAS, kwacha, matchesQuery, originFor } from '../format';
 
 export default function Discover() {
@@ -123,13 +123,9 @@ function DiscoverScreen() {
         <Shell>
             <Head title="Discover" />
             <div className="mx-auto max-w-[1200px] px-4 pt-4 md:px-8">
-                <div className="flex items-center justify-between md:hidden">
-                    <Logo />
-                    <ViewToggle mode="list" />
-                </div>
-                <div className="mt-4 hidden items-center justify-between md:flex">
+                <div className="flex items-end justify-between gap-3">
                     <PageHead title="Discover providers" />
-                    <ViewToggle mode="list" />
+                    <div className="mb-4"><ViewToggle mode="list" /></div>
                 </div>
                 <label className="mt-4 block">
                     <span className="sr-only">Filter the providers already loaded</span>

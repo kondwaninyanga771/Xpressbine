@@ -17,7 +17,8 @@ function AccountScreen() {
     const { user, logout } = useAuth();
     const links = [
         { href: '/bookings', label: 'Bookings', show: true },
-        { href: '/messages', label: 'Messages', show: true },
+        { href: '/messages', label: 'Open messages', show: true },
+        { href: '/notifications', label: 'Alerts', show: true },
         { href: '/discover', label: 'Discover providers', show: user.role !== 'admin' },
         { href: '/dashboard', label: 'Provider dashboard', show: user.role === 'provider' },
         { href: '/wallet', label: 'Business wallet', show: user.role === 'business_client' },
@@ -30,6 +31,7 @@ function AccountScreen() {
             <div className="mx-auto max-w-lg px-4 py-6 md:px-8">
                 <p className="font-display text-xs font-bold uppercase tracking-[0.12em] text-zambezi">{humanize(user.role)}</p>
                 <h1 className="mt-1 font-display text-4xl font-semibold">{user.name}</h1>
+                <p className="mt-2 text-sm text-slate">Your profile lives here. Conversations open from the message icon beside your name. Bookings, alerts, and log out are in that menu.</p>
                 <dl className="card mt-5 space-y-2 p-5 text-sm">
                     <Line label="Email" value={user.email} />
                     <Line label="Phone" value={user.phone} />
