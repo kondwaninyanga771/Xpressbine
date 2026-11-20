@@ -1,3 +1,54 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-semibold tracking-wide transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply btn bg-zambezi text-white hover:bg-[#095c44];
+    }
+
+    .btn-copper {
+        @apply btn bg-copper text-white hover:bg-[#cf6624];
+    }
+
+    .btn-ghost {
+        @apply btn border-[1.5px] border-cloud bg-white text-ink hover:border-zambezi;
+    }
+
+    .btn-ink {
+        @apply btn border border-white/25 bg-transparent text-white hover:bg-white/10;
+    }
+
+    .field {
+        @apply h-12 w-full rounded-lg border-[1.5px] border-cloud bg-white px-4 text-sm text-ink outline-none transition placeholder:text-slate/70 focus:border-zambezi focus:ring-[3px] focus:ring-zambezi/15;
+    }
+
+    .card {
+        @apply rounded-2xl border border-cloud bg-white shadow-card;
+    }
+
+    .pill {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-[11px] font-bold uppercase tracking-[0.04em];
+    }
+}
