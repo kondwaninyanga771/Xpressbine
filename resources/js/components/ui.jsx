@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { api, listOf } from '../api';
 import { initials, kilometres, kwacha, leadPackage, wash } from '../format';
 import { useAuth } from '../auth';
 
@@ -20,98 +21,415 @@ export function Logo({ light = false }) {
 }
 
 function Icon({ name }) {
-    const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
+    const common = {
+        viewBox: '0 0 24 24',
+        className: 'h-5 w-5',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.8,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': true,
+    };
 
     if (name === 'feed') {
-        return (
-            <svg viewBox="0 0 24 24" className="h-5 w-5" {...common}>
-                <path d="M4 8h16M4 12h16M4 16h10" />
-            </svg>
-        );
+        return <svg {...common}><path d="M4 8h16M4 12h16M4 16h10" /></svg>;
     }
 
     if (name === 'discover') {
         return (
-            <svg viewBox="0 0 24 24" className="h-5 w-5" {...common}>
+            <svg {...common}>
                 <circle cx="12" cy="12" r="8" />
                 <path d="m14.5 9.5-1.2 3.8-3.8 1.2 1.2-3.8 3.8-1.2z" />
             </svg>
         );
     }
 
-    if (name === 'messages') {
+    if (name === 'map') {
         return (
-            <svg viewBox="0 0 24 24" className="h-5 w-5" {...common}>
-                <path d="M6 16.5 4 19V7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v6A2.5 2.5 0 0 1 17.5 16H8z" />
+            <svg {...common}>
+                <path d="M9 18 3 20V6l6-2 6 2 6-2v14l-6 2-6-2z" />
+                <path d="M9 4v14M15 6v14" />
+            </svg>
+        );
+    }
+
+    if (name === 'messages') {
+        return <svg {...common}><path d="M6 16.5 4 19V7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v6A2.5 2.5 0 0 1 17.5 16H8z" /></svg>;
+    }
+
+    if (name === 'bookings') {
+        return (
+            <svg {...common}>
+                <rect x="4" y="5" width="16" height="15" rx="2" />
+                <path d="M8 3v4M16 3v4M4 10h16" />
+            </svg>
+        );
+    }
+
+    if (name === 'jobs') {
+        return (
+            <svg {...common}>
+                <path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7" />
+                <rect x="4" y="7" width="16" height="13" rx="2" />
+            </svg>
+        );
+    }
+
+    if (name === 'dashboard') {
+        return (
+            <svg {...common}>
+                <rect x="4" y="4" width="7" height="7" rx="1.5" />
+                <rect x="13" y="4" width="7" height="4" rx="1.5" />
+                <rect x="13" y="10" width="7" height="10" rx="1.5" />
+                <rect x="4" y="13" width="7" height="7" rx="1.5" />
+            </svg>
+        );
+    }
+
+    if (name === 'wallet') {
+        return (
+            <svg {...common}>
+                <rect x="3" y="6" width="18" height="13" rx="2" />
+                <path d="M3 10h18" />
+                <circle cx="16" cy="14.5" r="1" />
+            </svg>
+        );
+    }
+
+    if (name === 'ops') {
+        return (
+            <svg {...common}>
+                <path d="M12 4 4 8v5c0 4.2 3.2 6.8 8 8 4.8-1.2 8-3.8 8-8V8l-8-4z" />
+                <path d="m9 12 2 2 4-4" />
             </svg>
         );
     }
 
     return (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" {...common}>
+        <svg {...common}>
             <circle cx="12" cy="8" r="3" />
             <path d="M6 19c1.2-2.4 3-3.5 6-3.5s4.8 1.1 6 3.5" />
         </svg>
     );
 }
 
-const NAV = [
-    { href: '/', name: 'feed', label: 'Feed' },
-    { href: '/discover', name: 'discover', label: 'Discover' },
-    { href: '/messages', name: 'messages', label: 'Messages' },
-    { href: '/account', name: 'account', label: 'Account' },
-];
+function roleDestination(user) {
+    if (user?.role === 'provider') {
+        return { href: '/dashboard', name: 'dashboard', label: 'Dashboard' };
+    }
+
+    if (user?.role === 'business_client') {
+        return { href: '/wallet', name: 'wallet', label: 'Wallet' };
+    }
+
+    if (user?.role === 'admin') {
+        return { href: '/ops', name: 'ops', label: 'Ops' };
+    }
+
+    return null;
+}
+
+function contentSections(user) {
+    const items = [
+        { href: '/', name: 'feed', label: 'Feed' },
+        { href: '/discover', name: 'discover', label: 'Discover' },
+        { href: '/map', name: 'map', label: 'Map' },
+    ];
+
+    if (!user) {
+        return items;
+    }
+
+    items.push(
+        { href: '/bookings', name: 'bookings', label: 'Bookings' },
+        { href: '/jobs', name: 'jobs', label: 'Jobs' },
+    );
+
+    const role = roleDestination(user);
+
+    if (role) {
+        items.push(role);
+    }
+
+    return items;
+}
+
+function menuLinks(user) {
+    const links = [
+        { href: '/account', label: 'Account' },
+        { href: '/bookings', label: 'Bookings' },
+        { href: '/notifications', label: 'Alerts' },
+    ];
+    const role = roleDestination(user);
+
+    if (role) {
+        links.push({ href: role.href, label: role.label });
+    }
+
+    return links;
+}
+
+function itemActive(path, href) {
+    if (href === '/') {
+        return path === '/';
+    }
+
+    return path === href || path.startsWith(`${href}/`);
+}
+
+function linkClass(active) {
+    return `shrink-0 rounded-full px-3 py-1.5 font-display text-sm font-semibold transition ${active ? 'bg-zambezi text-white' : 'text-slate hover:bg-sand hover:text-ink'}`;
+}
+
+function MessagesButton({ active, unread }) {
+    const label = unread > 0 ? `Messages, ${unread} unread` : 'Messages';
+
+    return (
+        <Link
+            href="/messages"
+            aria-label={label}
+            aria-current={active ? 'page' : undefined}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-full transition ${active ? 'bg-zambezi text-white' : 'text-ink hover:bg-sand'}`}
+        >
+            <Icon name="messages" />
+            <span
+                data-slot="unread-badge"
+                className={`absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-copper px-1 text-center font-display text-[10px] font-bold leading-4 text-white ${unread > 0 ? '' : 'hidden'}`}
+            >
+                {unread > 9 ? '9+' : unread || ''}
+            </span>
+        </Link>
+    );
+}
+
+function AccountMenu({ user, path, logout }) {
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef(null);
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
+    const menuId = useId();
+    const links = menuLinks(user);
+    const onAccount = itemActive(path, '/account');
+
+    useEffect(() => {
+        if (!open) {
+            return undefined;
+        }
+
+        function onPointer(event) {
+            if (!rootRef.current?.contains(event.target)) {
+                setOpen(false);
+            }
+        }
+
+        function onKey(event) {
+            if (event.key === 'Escape') {
+                setOpen(false);
+                buttonRef.current?.focus();
+            }
+        }
+
+        document.addEventListener('pointerdown', onPointer);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('pointerdown', onPointer);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        menuRef.current?.querySelector('[role="menuitem"]')?.focus();
+    }, [open]);
+
+    function onMenuKeyDown(event) {
+        const nodes = [...(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])];
+        const index = nodes.indexOf(document.activeElement);
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            nodes[(index + 1) % nodes.length]?.focus();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            nodes[(index - 1 + nodes.length) % nodes.length]?.focus();
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            nodes[0]?.focus();
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            nodes[nodes.length - 1]?.focus();
+        } else if (event.key === ' ' && document.activeElement?.getAttribute('role') === 'menuitem') {
+            event.preventDefault();
+            document.activeElement.click();
+        } else if (event.key === 'Tab') {
+            setOpen(false);
+        }
+    }
+
+    return (
+        <div ref={rootRef} className="relative">
+            <button
+                ref={buttonRef}
+                type="button"
+                className={`flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-2 transition sm:pr-3 ${onAccount || open ? 'bg-zambezi text-white' : 'text-ink hover:bg-sand'}`}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                aria-controls={menuId}
+                onClick={() => setOpen((value) => !value)}
+                onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        setOpen(true);
+                    }
+                }}
+            >
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-xs font-semibold ${onAccount || open ? 'bg-white text-zambezi' : 'bg-ink text-white'}`}>
+                    {initials(user.name)}
+                </span>
+                <span className="min-w-0 truncate font-display text-sm font-semibold">{user.name}</span>
+                <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
+            {open && (
+                <div
+                    ref={menuRef}
+                    id={menuId}
+                    role="menu"
+                    aria-label="Account"
+                    onKeyDown={onMenuKeyDown}
+                    className="absolute right-0 top-[calc(100%+0.4rem)] z-40 w-56 rounded-2xl border border-cloud bg-white p-1.5 text-ink shadow-pop"
+                >
+                    {links.map((link) => {
+                        const active = itemActive(path, link.href);
+
+                        return (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                role="menuitem"
+                                tabIndex={-1}
+                                aria-current={active ? 'page' : undefined}
+                                className={`block rounded-xl px-3 py-2 font-display text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zambezi ${active ? 'bg-zambezi text-white' : 'hover:bg-sand'}`}
+                                onClick={() => setOpen(false)}
+                            >
+                                {link.label}
+                            </Link>
+                        );
+                    })}
+                    <div className="my-1 border-t border-cloud" />
+                    <button
+                        type="button"
+                        role="menuitem"
+                        tabIndex={-1}
+                        className="block w-full rounded-xl px-3 py-2 text-left font-display text-sm font-semibold hover:bg-sand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zambezi"
+                        onClick={() => {
+                            setOpen(false);
+                            logout();
+                        }}
+                    >
+                        Log out
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function Shell({ children, tone = 'sand' }) {
     const { url } = usePage();
     const path = url.split('?')[0];
-    const { user } = useAuth();
+    const { user, ready, logout } = useAuth();
+    const sections = contentSections(user);
+    const messagesActive = itemActive(path, '/messages');
+    const [unread, setUnread] = useState(0);
+
+    useEffect(() => {
+        if (!user) {
+            setUnread(0);
+            return undefined;
+        }
+
+        let active = true;
+
+        function load() {
+            api('/conversations')
+                .then((payload) => {
+                    if (!active) {
+                        return;
+                    }
+
+                    const total = listOf(payload).reduce((sum, row) => sum + Number(row.unread || 0), 0);
+                    setUnread(total);
+                })
+                .catch(() => {
+                    if (active) {
+                        setUnread(0);
+                    }
+                });
+        }
+
+        load();
+        window.addEventListener('xpressbine:conversations-changed', load);
+
+        return () => {
+            active = false;
+            window.removeEventListener('xpressbine:conversations-changed', load);
+        };
+    }, [user, path]);
 
     return (
         <div className={tone === 'ink' ? 'min-h-screen bg-ink text-white' : 'min-h-screen bg-sand text-ink'}>
-            <header className="sticky top-0 z-20 hidden border-b border-cloud/80 bg-sand/90 backdrop-blur md:block">
-                <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-8">
-                    <Link href="/">
-                        <Logo />
-                    </Link>
-                    <nav className="flex items-center gap-1 text-sm font-medium text-slate">
-                        {NAV.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`rounded-full px-3 py-1.5 ${path === item.href ? 'bg-zambezi text-white' : 'hover:text-ink'}`}
-                            >
+            <header className="sticky top-0 z-20 border-b border-cloud/80 bg-white/95 text-ink backdrop-blur">
+                <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center gap-3 px-3 md:gap-6 md:px-8">
+                    <Link href="/" className="shrink-0"><Logo /></Link>
+                    <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex" aria-label="Primary">
+                        {sections.map((item) => (
+                            <Link key={item.href} href={item.href} aria-current={itemActive(path, item.href) ? 'page' : undefined} className={linkClass(itemActive(path, item.href))}>
                                 {item.label}
                             </Link>
                         ))}
-                        <Link href="/map" className={`rounded-full px-3 py-1.5 ${path === '/map' ? 'bg-zambezi text-white' : 'hover:text-ink'}`}>
-                            Map
-                        </Link>
-                        {user && (
-                            <Link href="/bookings" className={`rounded-full px-3 py-1.5 ${path.startsWith('/bookings') ? 'bg-zambezi text-white' : 'hover:text-ink'}`}>
-                                Bookings
-                            </Link>
-                        )}
-                        {user?.role === 'provider' && <Link href="/dashboard" className="rounded-full px-3 py-1.5 hover:text-ink">Dashboard</Link>}
-                        {user?.role === 'business_client' && <Link href="/wallet" className="rounded-full px-3 py-1.5 hover:text-ink">Wallet</Link>}
-                        {user?.role === 'admin' && <Link href="/ops" className="rounded-full px-3 py-1.5 hover:text-ink">Desk</Link>}
                     </nav>
-                    <div className="ml-auto text-sm text-slate">
-                        {user ? user.name : <Link href="/login" className="btn-primary !px-4 !py-2">Log in</Link>}
+                    <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+                        {ready && user && (
+                            <>
+                                <MessagesButton active={messagesActive} unread={unread} />
+                                <AccountMenu user={user} path={path} logout={logout} />
+                            </>
+                        )}
+                        {ready && !user && (
+                            <>
+                                <Link href="/login" className="rounded-full px-3 py-1.5 font-display text-sm font-semibold text-ink hover:bg-sand">Log in</Link>
+                                <Link href="/register" className="btn-primary !px-3 !py-2 sm:!px-4">Create account</Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>
             <main className="pb-28 md:pb-10">{children}</main>
-            <nav className="fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-md items-center justify-around rounded-full border border-cloud bg-white px-2 py-2 text-slate shadow-pop md:hidden">
-                {NAV.map((item) => {
-                    const active = path === item.href;
-                    return (
-                        <Link key={item.href} href={item.href} className={`flex min-w-16 flex-col items-center gap-0.5 rounded-full px-3 py-1 font-display text-[11px] font-semibold ${active ? 'text-zambezi' : ''}`}>
-                            <Icon name={item.name} />
-                            {item.label}
-                        </Link>
-                    );
-                })}
+            <nav aria-label="Primary" className="fixed inset-x-2 bottom-2 z-30 md:hidden">
+                <div className="mx-auto flex max-w-lg items-stretch justify-between gap-0.5 overflow-x-auto rounded-full border border-cloud bg-white px-1.5 py-1.5 text-slate shadow-pop">
+                    {sections.map((item) => {
+                        const active = itemActive(path, item.href);
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                aria-current={active ? 'page' : undefined}
+                                className={`flex min-w-[3.6rem] flex-1 flex-col items-center gap-0.5 rounded-full px-1.5 py-1 font-display text-[10px] font-semibold leading-none ${active ? 'bg-zambezi text-white' : ''}`}
+                            >
+                                <Icon name={item.name} />
+                                {item.label}
+                            </Link>
+                        );
+                    })}
+                </div>
             </nav>
         </div>
     );
@@ -173,7 +491,7 @@ export function ProviderCard({ provider, origin }) {
     const title = pack?.title || provider.user?.name || 'Provider';
 
     return (
-        <Link href={`/providers/${provider.id}`} className="card flex flex-col p-4 transition hover:-translate-y-0.5">
+        <Link href={`/providers/${provider.id}`} className="card flex flex-col p-4 transition hover:-translate-y-0.5 hover:border-zambezi/40 hover:shadow-pop">
             <div className="flex items-start justify-between gap-2">
                 {photo ? (
                     <img src={photo} alt="" className="h-11 w-11 rounded-full object-cover" />

@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureAccountActive::class,
         ]);
 
+        $middleware->prepend(\App\Http\Middleware\ActivateJsonDatabase::class);
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);

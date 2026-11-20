@@ -8,6 +8,9 @@
 
 return [
 
+    // json keeps every table in storage/app/data/db.json. database uses DB_*.
+    'data_driver' => env('XPRESSBINE_DATA_DRIVER', 'json'),
+
     'currency' => env('XPRESSBINE_CURRENCY', 'ZMW'),
 
     'commission_rate' => env('XPRESSBINE_COMMISSION_RATE', '0.12'),

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use App\Models\BusinessPlan;
 use App\Models\BusinessSite;
 use App\Models\LedgerEntry;
 use App\Services\EscrowService;
@@ -113,6 +115,79 @@ class BusinessController extends Controller
                 'current_page' => $entries->currentPage(),
                 'last_page' => $entries->lastPage(),
                 'total' => $entries->total(),
+            ],
+        ]);
+    }
+
+    public function plans(Request $request): JsonResponse
+    {
+        $business = $this->business($request);
+
+        return response()->json([
+            'data' => BusinessPlan::query()->where('business_id', $business->id)->orderByDesc('month')->get(),
+        ]);
+    }
+
+    public function storePlan(Request $request): JsonResponse
+    {
+        $business = $this->business($request);
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+            'amount' => ['required', 'numeric', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $plan = BusinessPlan::query()->updateOrCreate(
+            ['business_id' => $business->id, 'month' => $data['month']],
+            [
+                'amount' => $data['amount'],
+                'notes' => $data['notes'] ?? null,
+                'status' => 'draft',
+                'confirmed_at' => null,
+            ],
+        );
+
+        return response()->json(['data' => $plan], 201);
+    }
+
+    public function confirmPlan(Request $request, BusinessPlan $plan): JsonResponse
+    {
+        $business = $this->business($request);
+        abort_unless($plan->business_id === $business->id, 403);
+        $plan->status = 'confirmed';
+        $plan->confirmed_at = now();
+        $plan->save();
+
+        return response()->json(['data' => $plan]);
+    }
+
+    public function finops(Request $request, LedgerService $ledger, PlatformConfig $config): JsonResponse
+    {
+        $business = $this->business($request);
+        $business->load('sites', 'wallet');
+        $bookings = Booking::query()
+            ->where('customer_id', $request->user()->id)
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->get();
+        $booked = '0.00';
+
+        foreach ($bookings as $booking) {
+            if (! in_array($booking->status?->value, ['cancelled', 'refunded'], true)) {
+                $booked = Money::add($booked, $booking->amount);
+            }
+        }
+
+        $month = now()->format('Y-m');
+
+        return response()->json([
+            'data' => [
+                'month' => $month,
+                'currency' => $config->get('currency'),
+                'wallet_balance' => $ledger->walletBalance($business->wallet),
+                'booked_this_month' => $booked,
+                'booking_count' => $bookings->count(),
+                'plan' => BusinessPlan::query()->where('business_id', $business->id)->where('month', $month)->first(),
+                'sites' => $business->sites->map(fn (BusinessSite $site) => $this->sitePayload($site, $ledger, $config)),
             ],
         ]);
     }

@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { api, firstError, listOf, qs } from '../api';
 import { useAuth } from '../auth';
-import { Alert, Logo, PageHead, ProviderCard, RequireAuth, Shell, ViewToggle } from '../components/ui';
+import { Alert, PageHead, ProviderCard, RequireAuth, Shell, ViewToggle } from '../components/ui';
 import { areaByName, AREAS, kwacha, matchesQuery, originFor } from '../format';
 
 export default function Discover() {
@@ -53,11 +53,13 @@ function DiscoverScreen() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [estimate, setEstimate] = useState(null);
+    const [savedEstimates, setSavedEstimates] = useState([]);
     const [problem, setProblem] = useState('');
     const [estimating, setEstimating] = useState(false);
 
     useEffect(() => {
         api('/categories').then((payload) => setCategories(listOf(payload))).catch(() => {});
+        api('/estimates').then((payload) => setSavedEstimates(listOf(payload))).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -108,6 +110,8 @@ function DiscoverScreen() {
         try {
             const payload = await api('/ai/estimate', { method: 'POST', json: { description: problem } });
             setEstimate(payload.data);
+            const saved = await api('/estimates');
+            setSavedEstimates(listOf(saved));
         } catch (reason) {
             setError(firstError(reason));
         } finally {
@@ -118,14 +122,10 @@ function DiscoverScreen() {
     return (
         <Shell>
             <Head title="Discover" />
-            <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
-                <div className="flex items-center justify-between md:hidden">
-                    <Logo />
-                    <ViewToggle mode="list" />
-                </div>
-                <div className="mt-4 hidden items-center justify-between md:flex">
+            <div className="mx-auto max-w-[1200px] px-4 pt-4 md:px-8">
+                <div className="flex items-end justify-between gap-3">
                     <PageHead title="Discover providers" />
-                    <ViewToggle mode="list" />
+                    <div className="mb-4"><ViewToggle mode="list" /></div>
                 </div>
                 <label className="mt-4 block">
                     <span className="sr-only">Filter the providers already loaded</span>
@@ -178,6 +178,16 @@ function DiscoverScreen() {
                         </div>
                     )}
                 </form>
+                {savedEstimates.length > 0 && (
+                    <div className="mt-3 flex gap-2 overflow-x-auto">
+                        {savedEstimates.slice(0, 6).map((item) => (
+                            <button key={item.id} type="button" className="card shrink-0 px-4 py-3 text-left transition hover:border-zambezi/40" onClick={() => item.trade && go(filters, { category: item.trade, featured: false })}>
+                                <span className="block font-display text-sm font-semibold">{item.trade_label || item.trade}</span>
+                                <span className="text-xs text-slate">{kwacha(item.price_min)} – {kwacha(item.price_max)}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {error && <div className="mt-4"><Alert>{error}</Alert></div>}
 
@@ -187,11 +197,11 @@ function DiscoverScreen() {
                         action={<Link href={`/map?near=${encodeURIComponent(filters.near || origin.name)}&category=${filters.category}&sort=${filters.sort}`} className="font-display text-sm font-semibold text-zambezi">Map</Link>}
                     />
                     {loading ? (
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
                             {[0, 1, 2, 3].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl bg-white" />)}
                         </div>
                     ) : visible.length ? (
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
                             {visible.map((provider) => <ProviderCard key={provider.id} provider={provider} origin={origin} />)}
                         </div>
                     ) : (

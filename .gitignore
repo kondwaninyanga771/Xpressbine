@@ -5,6 +5,9 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/data/*.json
+/storage/app/data/*.lock
+/storage/app/data/*.tmp
 /vendor
 .env
 /database/*.sqlite
