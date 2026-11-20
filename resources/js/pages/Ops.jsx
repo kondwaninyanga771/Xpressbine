@@ -25,8 +25,9 @@ function OpsScreen() {
                 <div className="mt-4 flex gap-2">
                     <button type="button" className={`pill border ${tab === 'providers' ? 'border-zambezi bg-zambezi text-white' : 'border-cloud bg-white'}`} onClick={() => setTab('providers')}>Verification</button>
                     <button type="button" className={`pill border ${tab === 'disputes' ? 'border-zambezi bg-zambezi text-white' : 'border-cloud bg-white'}`} onClick={() => setTab('disputes')}>Disputes</button>
+                    <button type="button" className={`pill border ${tab === 'appeals' ? 'border-zambezi bg-zambezi text-white' : 'border-cloud bg-white'}`} onClick={() => setTab('appeals')}>Appeals</button>
                 </div>
-                <div className="mt-5">{tab === 'providers' ? <Providers /> : <Disputes />}</div>
+                <div className="mt-5">{tab === 'providers' ? <Providers /> : tab === 'disputes' ? <Disputes /> : <Appeals />}</div>
             </div>
         </Shell>
     );
@@ -49,6 +50,17 @@ function Providers() {
         setError('');
         try {
             await api(`/admin/providers/${id}/verify`, { method: 'POST' });
+            load();
+        } catch (failure) {
+            setError(firstError(failure));
+        }
+    }
+
+    async function moderate(userId) {
+        setError('');
+
+        try {
+            await api(`/admin/users/${userId}/moderate`, { method: 'POST', json: { action: 'suspend', reason: reason || 'Suspended from the trust desk', days: 7 } });
             load();
         } catch (failure) {
             setError(firstError(failure));
@@ -81,9 +93,12 @@ function Providers() {
                             {provider.nrc_number && <p className="mt-1 text-xs text-slate">NRC {provider.nrc_number}</p>}
                             <p className="mt-1 text-xs text-slate">{(provider.categories || []).map((category) => category.name).join(', ')}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <button type="button" className="btn-primary !px-4 !py-2" onClick={() => verify(provider.id)}>Verify</button>
                             <button type="button" className="btn-ghost !px-4 !py-2" onClick={() => reject(provider.id)}>Reject</button>
+                            {provider.user?.id && (
+                                <button type="button" className="btn-copper !px-4 !py-2" onClick={() => moderate(provider.user.id)}>Suspend</button>
+                            )}
                         </div>
                     </div>
                 </article>
@@ -155,6 +170,55 @@ function Disputes() {
                 </article>
             ))}
             {!rows.length && <Alert tone="ok">No disputes.</Alert>}
+        </div>
+    );
+}
+
+function Appeals() {
+    const [rows, setRows] = useState([]);
+    const [error, setError] = useState('');
+
+    function load() {
+        api('/admin/appeals').then((payload) => {
+            const page = payload.data;
+            setRows(Array.isArray(page) ? page : (page?.data || []));
+        }).catch((failure) => setError(failure.message));
+    }
+
+    useEffect(() => {
+        load();
+    }, []);
+
+    async function decide(id, decision) {
+        setError('');
+
+        try {
+            await api(`/admin/appeals/${id}/decide`, { method: 'POST', json: { decision, notes: decision } });
+            load();
+        } catch (failure) {
+            setError(firstError(failure));
+        }
+    }
+
+    const items = rows;
+
+    return (
+        <div className="space-y-3">
+            {error && <Alert>{error}</Alert>}
+            {items.map((appeal) => (
+                <article key={appeal.id} className="card p-4">
+                    <p className="font-display font-semibold">{appeal.user?.name || `User ${appeal.user_id}`}</p>
+                    <p className="mt-1 text-sm">{appeal.message}</p>
+                    <p className="mt-1 text-xs text-slate">{appeal.status}</p>
+                    {appeal.status === 'pending' && (
+                        <div className="mt-3 flex gap-2">
+                            <button type="button" className="btn-primary !px-4 !py-2" onClick={() => decide(appeal.id, 'accepted')}>Accept</button>
+                            <button type="button" className="btn-ghost !px-4 !py-2" onClick={() => decide(appeal.id, 'rejected')}>Reject</button>
+                        </div>
+                    )}
+                </article>
+            ))}
+            {!items.length && <Alert tone="ok">No appeals.</Alert>}
         </div>
     );
 }

@@ -23,6 +23,8 @@ class EnsureAccountActive
                 'auth.me',
                 'auth.logout',
                 'appeals.store',
+                'appeals.index',
+                'moderation.mine',
                 'notifications.index',
                 'notifications.read',
             ]);

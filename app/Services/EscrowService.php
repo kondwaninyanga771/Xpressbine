@@ -8,6 +8,7 @@ use App\Enums\MobileMoneyProvider;
 use App\Enums\UserRole;
 use App\Exceptions\DomainException;
 use App\Models\Booking;
+use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Support\Money;
@@ -49,6 +50,7 @@ class EscrowService
             );
 
             $this->hold($booking, $customer);
+            $this->recordPayment($customer, 'booking_payment', (string) $booking->amount, $booking->id, null, $provider, $phone);
 
             return $booking->fresh();
         });
@@ -113,7 +115,7 @@ class EscrowService
             throw new DomainException('Top-up amount must be greater than zero.');
         }
 
-        return $this->ledger->post(
+        $entry = $this->ledger->post(
             LedgerEntryType::WalletTopup,
             $amount,
             '0.00',
@@ -125,6 +127,33 @@ class EscrowService
             $actor,
             ['method' => $method, 'mock' => true],
         );
+
+        $this->recordPayment($actor, 'wallet_topup', $amount, null, $wallet->id, $method, null);
+
+        return $entry;
+    }
+
+    private function recordPayment(
+        User $user,
+        string $kind,
+        string $amount,
+        ?int $bookingId,
+        ?int $walletId,
+        ?string $provider,
+        ?string $phone,
+    ): void {
+        PaymentTransaction::query()->create([
+            'user_id' => $user->id,
+            'booking_id' => $bookingId,
+            'wallet_id' => $walletId,
+            'kind' => $kind,
+            'provider' => $provider,
+            'phone' => $phone,
+            'amount' => $amount,
+            'currency' => config('xpressbine.currency'),
+            'status' => 'simulated_success',
+            'reference' => (string) Str::uuid(),
+        ]);
     }
 
     public function release(Booking $booking, ?User $actor, string $reason): Booking
