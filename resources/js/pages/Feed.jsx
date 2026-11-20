@@ -31,7 +31,7 @@ function GuestFeed() {
 
     return (
         <Shell tone="ink">
-            <section className="mx-auto flex min-h-[calc(100dvh-7rem)] w-full max-w-md flex-col justify-end bg-gradient-to-b from-[#163044] via-ink to-[#0B6B4F] px-5 pb-8 pt-16 md:my-8 md:min-h-[760px] md:rounded-[32px]">
+            <section className="mx-auto flex min-h-[calc(100dvh-11rem)] w-full max-w-md flex-col justify-end bg-gradient-to-b from-[#163044] via-ink to-[#0B6B4F] px-5 pb-8 pt-16 md:my-8 md:min-h-[760px] md:rounded-[32px]">
                 <Logo light />
                 <div className="mt-8 flex flex-wrap gap-2">
                     <span className="pill bg-white/10 text-white"><span className="h-1.5 w-1.5 rounded-full bg-mint" /> Lusaka</span>
@@ -84,7 +84,7 @@ function ProviderFeed({ user }) {
         <Shell>
             <div className="mx-auto grid max-w-[1200px] items-start gap-6 px-0 lg:grid-cols-[420px_minmax(0,1fr)] lg:px-8 lg:py-8">
                 <div className="relative lg:sticky lg:top-6">
-                    {!provider && !error && <div className="h-[calc(100dvh-7rem)] animate-pulse bg-ink md:h-[760px] md:rounded-[32px]" />}
+                    {!provider && !error && <div className="h-[calc(100dvh-11rem)] animate-pulse bg-ink md:h-[760px] md:rounded-[32px]" />}
                     {error && <p className="px-5 py-10 text-sm text-[#93000a]">{error}</p>}
                     {provider && (
                         <FeedCard
@@ -146,7 +146,7 @@ function FeedCard({ provider, origin, user, position, onPrev, onNext }) {
     }
 
     return (
-        <article className={`relative flex h-[calc(100dvh-7rem)] flex-col justify-end overflow-hidden px-5 pb-6 pt-16 text-white md:h-[760px] md:rounded-[32px] ${photo ? '' : `bg-gradient-to-b ${wash(category?.slug)}`}`} style={photo ? { backgroundImage: `linear-gradient(to top, rgba(14,27,44,0.94) 12%, rgba(14,27,44,0.28) 58%), url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+        <article className={`relative flex h-[calc(100dvh-11rem)] flex-col justify-end overflow-hidden px-5 pb-6 pt-16 text-white md:h-[760px] md:rounded-[32px] ${photo ? '' : `bg-gradient-to-b ${wash(category?.slug)}`}`} style={photo ? { backgroundImage: `linear-gradient(to top, rgba(14,27,44,0.94) 12%, rgba(14,27,44,0.28) 58%), url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
             <div className="absolute left-5 right-20 top-5 flex items-center justify-between text-xs text-white/70">
                 <span className="font-display font-semibold uppercase tracking-[0.14em]">Near {origin.name}</span>
                 <span>{position}</span>

@@ -15,6 +15,7 @@ export function ChatPane({ peerId, user }) {
         const payload = await api(`/conversations/${conversationId}/messages`);
         setConversation(payload.data.conversation);
         setMessages(payload.data.messages || []);
+        window.dispatchEvent(new Event('xpressbine:conversations-changed'));
     }
 
     useEffect(() => {
