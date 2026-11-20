@@ -46,7 +46,7 @@ function MapScreen() {
     return (
         <Shell>
             <Head title="Map" />
-            <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+            <div className="mx-auto max-w-[1200px] px-4 pt-4 md:px-8">
                 <div className="flex items-center justify-between">
                     <Logo />
                     <ViewToggle mode="map" />
@@ -71,16 +71,18 @@ function MapScreen() {
                     Pins use latitude and longitude from each provider. On SQLite the API does not return distance_km, so kilometres on the cards are calculated from those coordinates.
                 </p>
                 {error && <div className="mt-4"><Alert>{error}</Alert></div>}
-                <div className="mt-4">
-                    {loading ? <div className="h-80 animate-pulse rounded-[28px] bg-ink" /> : <LusakaMap providers={providers} origin={origin} />}
-                </div>
-                <div className="mt-4">
-                    <Link href={`/discover${query}`} className="btn-ghost">Browse the list</Link>
-                </div>
-                <div className="mt-8">
+                <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+                    <div>
+                        {loading ? <div className="h-80 animate-pulse rounded-[28px] bg-ink lg:h-[560px]" /> : <div className="lg:[&>div]:h-[560px]"><LusakaMap providers={providers} origin={origin} /></div>}
+                        <div className="mt-4">
+                            <Link href={`/discover${query}`} className="btn-ghost">Browse the list</Link>
+                        </div>
+                    </div>
+                    <div>
                     <PageHead title="In this search" />
-                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-1 xl:grid-cols-2">
                         {providers.map((provider) => <ProviderCard key={provider.id} provider={provider} origin={origin} />)}
+                    </div>
                     </div>
                 </div>
             </div>

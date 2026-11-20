@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AiEstimateController;
 use App\Http\Controllers\Api\AppealController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BusinessController;
@@ -29,6 +30,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
+    Route::get('/conversations', [ChatController::class, 'index']);
+    Route::post('/conversations', [ChatController::class, 'open']);
+    Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages']);
+    Route::post('/conversations/{conversation}/messages', [ChatController::class, 'storeMessage']);
+
+    Route::get('/estimates', [AiEstimateController::class, 'index']);
+    Route::get('/appeals', [AppealController::class, 'index'])->name('appeals.index');
+    Route::get('/moderation-actions', [AppealController::class, 'actions'])->name('moderation.mine');
+
     Route::get('/job-requests', [JobRequestController::class, 'index']);
     Route::get('/job-requests/{jobRequest}', [JobRequestController::class, 'show']);
 
@@ -41,6 +51,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::middleware('role:customer,business_client')->group(function () {
         Route::post('/ai/estimate', [AiEstimateController::class, 'store']);
+        Route::get('/payments', function (\Illuminate\Http\Request $request) {
+            return response()->json([
+                'data' => \App\Models\PaymentTransaction::query()->where('user_id', $request->user()->id)->latest()->limit(30)->get(),
+            ]);
+        });
         Route::post('/job-requests', [JobRequestController::class, 'store']);
         Route::post('/bookings', [BookingController::class, 'store']);
         Route::post('/quotes/{quote}/accept', [QuoteController::class, 'accept']);
@@ -73,6 +88,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::put('/sites/{site}', [BusinessController::class, 'updateSite']);
         Route::post('/wallet/topup', [BusinessController::class, 'topUp']);
         Route::get('/wallet/statement', [BusinessController::class, 'statement']);
+        Route::get('/plans', [BusinessController::class, 'plans']);
+        Route::post('/plans', [BusinessController::class, 'storePlan']);
+        Route::post('/plans/{plan}/confirm', [BusinessController::class, 'confirmPlan']);
+        Route::get('/finops', [BusinessController::class, 'finops']);
     });
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {

@@ -58,53 +58,87 @@ function Icon({ name }) {
 const NAV = [
     { href: '/', name: 'feed', label: 'Feed' },
     { href: '/discover', name: 'discover', label: 'Discover' },
+    { href: '/map', name: 'discover', label: 'Map' },
     { href: '/messages', name: 'messages', label: 'Messages' },
     { href: '/account', name: 'account', label: 'Account' },
 ];
+
+function navItems(user) {
+    const items = [...NAV];
+
+    if (user) {
+        items.splice(3, 0, { href: '/bookings', name: 'feed', label: 'Bookings' });
+        items.splice(4, 0, { href: '/jobs', name: 'discover', label: 'Jobs' });
+        items.splice(5, 0, { href: '/notifications', name: 'messages', label: 'Alerts' });
+    }
+
+    if (user?.role === 'provider') {
+        items.push({ href: '/dashboard', name: 'account', label: 'Dashboard' });
+    }
+
+    if (user?.role === 'business_client') {
+        items.push({ href: '/wallet', name: 'account', label: 'Wallet' });
+    }
+
+    if (user?.role === 'admin') {
+        items.push({ href: '/ops', name: 'account', label: 'Desk' });
+    }
+
+    return items;
+}
+
+function itemActive(path, href) {
+    if (href === '/') {
+        return path === '/';
+    }
+
+    return path === href || path.startsWith(`${href}/`);
+}
 
 export function Shell({ children, tone = 'sand' }) {
     const { url } = usePage();
     const path = url.split('?')[0];
     const { user } = useAuth();
+    const items = navItems(user);
+    const mobile = items.filter((item) => ['/', '/discover', '/messages', '/account'].includes(item.href));
 
     return (
-        <div className={tone === 'ink' ? 'min-h-screen bg-ink text-white' : 'min-h-screen bg-sand text-ink'}>
-            <header className="sticky top-0 z-20 hidden border-b border-cloud/80 bg-sand/90 backdrop-blur md:block">
-                <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-8">
-                    <Link href="/">
-                        <Logo />
-                    </Link>
-                    <nav className="flex items-center gap-1 text-sm font-medium text-slate">
-                        {NAV.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`rounded-full px-3 py-1.5 ${path === item.href ? 'bg-zambezi text-white' : 'hover:text-ink'}`}
-                            >
-                                {item.label}
-                            </Link>
-                        ))}
-                        <Link href="/map" className={`rounded-full px-3 py-1.5 ${path === '/map' ? 'bg-zambezi text-white' : 'hover:text-ink'}`}>
-                            Map
+        <div className={`${tone === 'ink' ? 'bg-ink text-white' : 'bg-sand text-ink'} min-h-screen lg:grid lg:grid-cols-[240px_minmax(0,1fr)]`}>
+            <aside className="sticky top-0 hidden h-screen flex-col border-r border-cloud bg-white px-4 py-6 lg:flex">
+                <Link href="/"><Logo /></Link>
+                <nav className="mt-8 flex flex-1 flex-col gap-1">
+                    {items.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`rounded-full px-3 py-2 font-display text-sm font-semibold transition hover:bg-sand ${itemActive(path, item.href) ? 'bg-zambezi text-white hover:bg-zambezi' : 'text-slate hover:text-ink'}`}
+                        >
+                            {item.label}
                         </Link>
-                        {user && (
-                            <Link href="/bookings" className={`rounded-full px-3 py-1.5 ${path.startsWith('/bookings') ? 'bg-zambezi text-white' : 'hover:text-ink'}`}>
-                                Bookings
-                            </Link>
-                        )}
-                        {user?.role === 'provider' && <Link href="/dashboard" className="rounded-full px-3 py-1.5 hover:text-ink">Dashboard</Link>}
-                        {user?.role === 'business_client' && <Link href="/wallet" className="rounded-full px-3 py-1.5 hover:text-ink">Wallet</Link>}
-                        {user?.role === 'admin' && <Link href="/ops" className="rounded-full px-3 py-1.5 hover:text-ink">Desk</Link>}
-                    </nav>
-                    <div className="ml-auto text-sm text-slate">
-                        {user ? user.name : <Link href="/login" className="btn-primary !px-4 !py-2">Log in</Link>}
-                    </div>
+                    ))}
+                </nav>
+                <div className="text-sm text-slate">
+                    {user ? user.name : <Link href="/login" className="btn-primary w-full">Log in</Link>}
                 </div>
-            </header>
-            <main className="pb-28 md:pb-10">{children}</main>
+            </aside>
+            <div className="min-w-0">
+                <header className="sticky top-0 z-20 hidden border-b border-cloud/80 bg-sand/90 backdrop-blur md:block lg:hidden">
+                    <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-6">
+                        <Link href="/"><Logo /></Link>
+                        <nav className="flex flex-1 items-center gap-1 overflow-x-auto text-sm font-medium text-slate">
+                            {items.map((item) => (
+                                <Link key={item.href} href={item.href} className={`shrink-0 rounded-full px-3 py-1.5 transition hover:bg-white ${itemActive(path, item.href) ? 'bg-zambezi text-white' : 'hover:text-ink'}`}>
+                                    {item.label}
+                                </Link>
+                            ))}
+                        </nav>
+                    </div>
+                </header>
+                <main className="pb-28 md:pb-10">{children}</main>
+            </div>
             <nav className="fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-md items-center justify-around rounded-full border border-cloud bg-white px-2 py-2 text-slate shadow-pop md:hidden">
-                {NAV.map((item) => {
-                    const active = path === item.href;
+                {mobile.map((item) => {
+                    const active = itemActive(path, item.href);
                     return (
                         <Link key={item.href} href={item.href} className={`flex min-w-16 flex-col items-center gap-0.5 rounded-full px-3 py-1 font-display text-[11px] font-semibold ${active ? 'text-zambezi' : ''}`}>
                             <Icon name={item.name} />
@@ -173,7 +207,7 @@ export function ProviderCard({ provider, origin }) {
     const title = pack?.title || provider.user?.name || 'Provider';
 
     return (
-        <Link href={`/providers/${provider.id}`} className="card flex flex-col p-4 transition hover:-translate-y-0.5">
+        <Link href={`/providers/${provider.id}`} className="card flex flex-col p-4 transition hover:-translate-y-0.5 hover:border-zambezi/40 hover:shadow-pop">
             <div className="flex items-start justify-between gap-2">
                 {photo ? (
                     <img src={photo} alt="" className="h-11 w-11 rounded-full object-cover" />

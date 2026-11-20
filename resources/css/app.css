@@ -28,6 +28,12 @@
         @apply btn bg-zambezi text-white hover:bg-[#095c44];
     }
 
+    .btn-primary:hover,
+    .btn-copper:hover,
+    .btn-ghost:hover {
+        transform: translateY(-1px);
+    }
+
     .btn-copper {
         @apply btn bg-copper text-white hover:bg-[#cf6624];
     }

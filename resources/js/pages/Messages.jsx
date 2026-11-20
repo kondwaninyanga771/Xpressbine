@@ -1,110 +1,69 @@
-import { Head, Link } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import { api, listOf } from '../api';
 import { useAuth } from '../auth';
 import { Alert, Avatar, Empty, RequireAuth, Shell } from '../components/ui';
-import { dayLabel, kwacha, STATUS_LABEL, when } from '../format';
+import { when } from '../format';
+import { ChatPane } from '../components/ChatPane';
 
 export default function Messages() {
     return (
         <RequireAuth>
-            <MessagesScreen />
+            <Inbox />
         </RequireAuth>
     );
 }
 
-function MessagesScreen() {
+export function Inbox({ activeUserId = null }) {
     const { user } = useAuth();
-    const [bookings, setBookings] = useState([]);
+    const { url } = usePage();
+    const [conversations, setConversations] = useState([]);
     const [text, setText] = useState('');
     const [error, setError] = useState('');
 
     useEffect(() => {
-        api('/bookings').then((payload) => setBookings(listOf(payload))).catch((reason) => setError(reason.message));
-    }, []);
+        api('/conversations').then((payload) => setConversations(listOf(payload))).catch((reason) => setError(reason.message));
+    }, [url]);
 
-    const peers = useMemo(() => peersFrom(bookings, user), [bookings, user]);
-    const visible = peers.filter((peer) => `${peer.name} ${peer.area || ''} ${peer.booking.package?.title || ''}`.toLowerCase().includes(text.toLowerCase()));
-    const upcoming = [...bookings]
-        .filter((booking) => ['requested', 'accepted', 'in_progress'].includes(booking.status))
-        .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
+    const visible = conversations.filter((conversation) => (conversation.other_user?.name || '').toLowerCase().includes(text.toLowerCase()));
 
     return (
         <Shell>
             <Head title="Messages" />
-            <div className="mx-auto max-w-3xl px-4 py-4 md:px-8">
-                <div className="flex items-center justify-between">
+            <div className="mx-auto grid max-w-[1200px] md:min-h-[70vh] md:grid-cols-[320px_minmax(0,1fr)]">
+                <section className={`${activeUserId ? 'hidden md:block' : ''} border-cloud px-4 py-4 md:border-r`}>
                     <h1 className="font-display text-3xl font-semibold">Messages</h1>
-                </div>
-                <Alert tone="stub">
-                    There is no chat API. This list is your real bookings. Opening someone starts a preview that stays in this browser only.
-                </Alert>
-                <input value={text} onChange={(event) => setText(event.target.value)} placeholder="Filter people from your bookings" className="field mt-4 !rounded-full" />
-                {error && <div className="mt-4"><Alert>{error}</Alert></div>}
-                <div className="mt-5 flex gap-4 overflow-x-auto pb-2">
-                    {visible.map((peer) => (
-                        <Link key={peer.id} href={`/messages/${peer.id}`} className="flex w-16 shrink-0 flex-col items-center gap-1 text-center">
-                            <Avatar name={peer.name} />
-                            <span className="truncate text-xs text-slate">{peer.name.split(' ')[0]}</span>
-                        </Link>
-                    ))}
-                </div>
-                {upcoming && (
-                    <Link href={`/bookings/${upcoming.id}`} className="mt-4 flex items-center justify-between gap-3 rounded-[24px] bg-[#e7f6ef] p-4">
-                        <span>
-                            <span className="flex items-center gap-2 font-display text-sm font-semibold text-zambezi">
-                                Next visit
-                                <span className="pill bg-copper text-white">{dayLabel(upcoming.scheduled_at)}</span>
-                            </span>
-                            <span className="mt-1 block text-sm">{upcoming.package?.title || upcoming.category?.name} · {when(upcoming.scheduled_at)}</span>
-                        </span>
-                        <span className="font-display text-sm font-semibold text-zambezi">View</span>
-                    </Link>
-                )}
-                <div className="mt-6 flex items-center justify-between">
-                    <h2 className="font-display text-xl font-semibold">From your bookings</h2>
-                </div>
-                <div className="mt-3 space-y-3">
-                    {visible.map((peer) => (
-                        <Link key={peer.id} href={`/messages/${peer.id}`} className="card flex items-center gap-3 p-4">
-                            <Avatar name={peer.name} />
-                            <span className="min-w-0 flex-1">
-                                <span className="flex items-baseline justify-between gap-2">
-                                    <span className="font-display font-semibold">{peer.name}</span>
-                                    <span className="text-xs text-slate">{when(peer.booking.scheduled_at)}</span>
-                                </span>
-                                <span className="mt-1 block truncate text-sm text-slate">
-                                    {peer.booking.package?.title || 'Booking'} · {STATUS_LABEL[peer.booking.status] || peer.booking.status} · {kwacha(peer.booking.amount)}
-                                </span>
-                            </span>
-                        </Link>
-                    ))}
-                </div>
-                {!visible.length && <div className="mt-4"><Empty>No one to message until you share a booking. Chat is not stored on the server.</Empty></div>}
+                    <input value={text} onChange={(event) => setText(event.target.value)} placeholder="Filter conversations" className="field mt-4 !rounded-full" />
+                    {error && <div className="mt-4"><Alert>{error}</Alert></div>}
+                    <div className="mt-4 space-y-2">
+                        {visible.map((conversation) => {
+                            const other = conversation.other_user;
+                            const active = other?.id === activeUserId;
+                            return (
+                                <Link key={conversation.id} href={`/messages/${other?.id}`} className={`flex items-center gap-3 rounded-2xl border px-3 py-3 transition hover:border-zambezi/40 ${active ? 'border-zambezi bg-white' : 'border-transparent bg-white/70'}`}>
+                                    <Avatar name={other?.name} />
+                                    <span className="min-w-0 flex-1">
+                                        <span className="flex items-baseline justify-between gap-2">
+                                            <span className="font-display font-semibold">{other?.name}</span>
+                                            <span className="text-xs text-slate">{when(conversation.last_message?.created_at)}</span>
+                                        </span>
+                                        <span className="mt-1 block truncate text-sm text-slate">{conversation.last_message?.body || 'No messages yet'}</span>
+                                    </span>
+                                    {conversation.unread > 0 && <span className="rounded-full bg-copper px-2 py-0.5 font-display text-[11px] font-bold text-white">{conversation.unread}</span>}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                    {!visible.length && !error && <div className="mt-4"><Empty>No conversations yet. Open a provider and choose Message.</Empty></div>}
+                </section>
+                <section className={`${activeUserId ? '' : 'hidden md:flex'} min-h-[70vh] flex-col`}>
+                    {activeUserId ? (
+                        <ChatPane peerId={activeUserId} user={user} />
+                    ) : (
+                        <div className="m-auto max-w-sm px-6 text-center text-sm text-slate">Choose a conversation. Messages are stored for both people.</div>
+                    )}
+                </section>
             </div>
         </Shell>
     );
-}
-
-export function peersFrom(bookings, user) {
-    const map = new Map();
-
-    bookings.forEach((booking) => {
-        const customer = booking.customer_id === user?.id;
-        const peer = customer ? booking.provider?.user : booking.customer;
-        const id = peer?.id;
-
-        if (!id || map.has(id)) {
-            return;
-        }
-
-        map.set(id, {
-            id,
-            name: peer.name || 'Person',
-            area: peer.area,
-            booking,
-        });
-    });
-
-    return [...map.values()];
 }

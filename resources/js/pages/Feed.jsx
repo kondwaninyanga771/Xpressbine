@@ -82,8 +82,8 @@ function ProviderFeed({ user }) {
 
     return (
         <Shell>
-            <div className="mx-auto grid max-w-6xl items-start gap-6 px-0 md:grid-cols-[420px_1fr] md:px-8 md:py-8">
-                <div className="relative">
+            <div className="mx-auto grid max-w-[1200px] items-start gap-6 px-0 lg:grid-cols-[420px_minmax(0,1fr)] lg:px-8 lg:py-8">
+                <div className="relative lg:sticky lg:top-6">
                     {!provider && !error && <div className="h-[calc(100dvh-7rem)] animate-pulse bg-ink md:h-[760px] md:rounded-[32px]" />}
                     {error && <p className="px-5 py-10 text-sm text-[#93000a]">{error}</p>}
                     {provider && (
@@ -97,10 +97,10 @@ function ProviderFeed({ user }) {
                         />
                     )}
                 </div>
-                <aside className="hidden md:block">
+                <aside className="hidden lg:block">
                     <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-zambezi">Near {origin.name}</p>
                     <h2 className="mt-1 font-display text-3xl font-semibold">Trades holding a package</h2>
-                    <div className="mt-5 space-y-3">
+                    <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-2">
                         {providers.map((item, itemIndex) => {
                             const pack = leadPackage(item);
                             return (

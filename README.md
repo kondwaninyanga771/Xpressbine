@@ -4,6 +4,18 @@ Lusaka marketplace API for booking local, in-person trades (plumbers, electricia
 
 This is the full first API version: bookings, escrow, refunds, a 48-hour auto-release job, client-absent safeguards, a Business Wallet, and a Filament admin panel. A React + Inertia frontend sits on the same app and calls this API.
 
+## JSON data file
+
+The app does not need a database server. `XPRESSBINE_DATA_DRIVER=json` (the default) keeps every table in `storage/app/data/db.json`. Each request locks that file, loads it, serves the existing Eloquent controllers, and writes the file back with an atomic rename. Set `XPRESSBINE_DATA_DRIVER=database` to use the `DB_*` connection instead and leave the JSON file alone.
+
+Create or replace the file from the demo seeder:
+
+```bash
+php artisan xpressbine:json-reset
+```
+
+`--no-seed` migrates an empty document. Delete `storage/app/data/db.json` and run the command again to start over. The file is gitignored.
+
 ## Web app
 
 The screens at `/` are React, rendered by Inertia and built with Vite. They do not duplicate booking or escrow rules. Each screen calls the JSON API with the Sanctum bearer token from `POST /api/login` (kept in the browser). Filament stays at `/admin`.
@@ -26,14 +38,7 @@ During development, `npm run dev` as well as `php artisan serve`.
 | Business wallet | `GET /api/business`, wallet top-up and statement |
 | Trust desk (`/ops`) | `GET /api/admin/providers`, verify, reject, `GET /api/admin/disputes`, resolve |
 
-Not built, because the API does not have it yet, or it was left out of this pass:
-
-- In-app chat. `/messages` lists people from real bookings. The thread is a browser-only preview and is labelled as such.
-- Job requests and quotes.
-- Appeals, warnings, suspensions and bans (the API and Filament still do these).
-- The notifications list.
-- Monthly plans, FinOps forecasts, PDF reports and WhatsApp.
-- A real Airtel, MTN or Zamtel charge. Pay calls the existing mock escrow endpoint.
+Also on the web app: real conversations (`/messages`), job requests and quotes (`/jobs`), alerts, appeals, a monthly business plan, and a FinOps summary computed from bookings. Mobile-money rows are stored, but the carrier call is still simulated. WhatsApp and PDF reports are not included.
 
 SQLite search does not return `distance_km` (it uses a bounding box, and the provider show distance query is Haversine SQL). Cards calculate kilometres from the latitude and longitude already on the provider user. The show request does not send coordinates, so that SQL is not run on SQLite.
 
@@ -280,4 +285,4 @@ Booking states: `requested` → `accepted` → `in_progress` → `completed`. Fr
 
 Escrow balance is the sum of `escrow_delta` on the ledger. A payment or wallet-payment row records where the money came from. A hold row puts that amount in escrow. Release, commission and payout rows are written when the customer confirms the job or the scheduler does it after the confirmation window. Refunds, partial refunds and call-out fees are their own rows.
 
-Not in this version: a real MTN, Airtel or Zamtel integration, WhatsApp or SMS, in-app chat, monthly business plans and FinOps reports, and the PostGIS extension itself.
+Not in this version: a live MTN, Airtel or Zamtel network call (payments are stored as `simulated_success` transactions), WhatsApp or SMS, PDF reports, and the PostGIS extension itself. Chat, monthly plans and the FinOps summary are stored.

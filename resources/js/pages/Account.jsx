@@ -1,5 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import { RequireAuth, Shell } from '../components/ui';
+import { useEffect, useState } from 'react';
+import { api, firstError, listOf } from '../api';
+import { Alert, Field, RequireAuth, Shell } from '../components/ui';
 import { useAuth } from '../auth';
 import { humanize } from '../format';
 
@@ -49,9 +51,62 @@ function AccountScreen() {
                         </a>
                     )}
                 </div>
+                <AppealPanel user={user} />
                 <button type="button" onClick={logout} className="btn-ghost mt-6 w-full">Log out</button>
             </div>
         </Shell>
+    );
+}
+
+function AppealPanel({ user }) {
+    const [actions, setActions] = useState([]);
+    const [message, setMessage] = useState('');
+    const [notice, setNotice] = useState('');
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (user.role !== 'provider') {
+            return;
+        }
+
+        api('/moderation-actions').then((payload) => setActions(listOf(payload))).catch(() => {});
+    }, [user.role]);
+
+    if (user.role !== 'provider') {
+        return null;
+    }
+
+    async function submit(event) {
+        event.preventDefault();
+        setError('');
+        setNotice('');
+        const action = actions[0];
+
+        if (!action) {
+            setError('There is no moderation action to appeal.');
+            return;
+        }
+
+        try {
+            await api('/provider/appeals', { method: 'POST', json: { moderation_action_id: action.id, message } });
+            setNotice('Appeal saved.');
+            setMessage('');
+        } catch (reason) {
+            setError(firstError(reason));
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="card mt-4 space-y-3 p-5">
+            <h2 className="font-display text-lg font-semibold">Appeal a moderation action</h2>
+            {error && <Alert>{error}</Alert>}
+            {notice && <Alert tone="ok">{notice}</Alert>}
+            {actions[0] ? <p className="text-sm text-slate">Latest action: {actions[0].action}. {actions[0].reason}</p> : <p className="text-sm text-slate">No moderation actions on this account.</p>}
+            <Field label="Message">
+                <textarea className="field !h-24 py-3" minLength={10} value={message} onChange={(event) => setMessage(event.target.value)} />
+            </Field>
+            <button className="btn-ghost" type="submit" disabled={!actions[0]}>Submit appeal</button>
+        </form>
     );
 }
 

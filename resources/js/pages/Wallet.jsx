@@ -103,10 +103,91 @@ function WalletScreen() {
                     </div>
                     {statement && <p className="mt-2 text-xs text-slate">Balance on the statement response: {kwacha(statement.balance)}</p>}
                 </section>
-                <Alert tone="stub">
-                    Monthly plans, the 25th plan suggestion, month-end PDF, forecasts, anomaly alerts and provider-value comparison are not in the API. This screen stops at the wallet, sites and statement that exist today.
-                </Alert>
+                <Finops />
             </div>
         </Shell>
+    );
+}
+
+function Finops() {
+    const [report, setReport] = useState(null);
+    const [plans, setPlans] = useState([]);
+    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [amount, setAmount] = useState('8000');
+    const [error, setError] = useState('');
+
+    function load() {
+        return Promise.all([api('/business/finops'), api('/business/plans')]).then(([finops, planPayload]) => {
+            setReport(finops.data);
+            setPlans(planPayload.data || []);
+        });
+    }
+
+    useEffect(() => {
+        load().catch((reason) => setError(reason.message));
+    }, []);
+
+    async function savePlan(event) {
+        event.preventDefault();
+        setError('');
+
+        try {
+            await api('/business/plans', { method: 'POST', json: { month, amount: Number(amount) } });
+            await load();
+        } catch (reason) {
+            setError(firstError(reason));
+        }
+    }
+
+    async function confirm(id) {
+        setError('');
+
+        try {
+            await api(`/business/plans/${id}/confirm`, { method: 'POST' });
+            await load();
+        } catch (reason) {
+            setError(firstError(reason));
+        }
+    }
+
+    return (
+        <>
+            {error && <Alert>{error}</Alert>}
+            {report && (
+                <section className="card grid gap-3 p-5 md:grid-cols-3">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.08em] text-slate">Booked {report.month}</p>
+                        <p className="font-display text-2xl font-semibold">{kwacha(report.booked_this_month)}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.08em] text-slate">Bookings</p>
+                        <p className="font-display text-2xl font-semibold">{report.booking_count}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.08em] text-slate">Plan</p>
+                        <p className="font-display text-2xl font-semibold">{report.plan ? `${kwacha(report.plan.amount)} ${report.plan.status}` : 'None'}</p>
+                    </div>
+                </section>
+            )}
+            <form onSubmit={savePlan} className="card grid gap-3 p-5 md:grid-cols-[1fr_1fr_auto]">
+                <Field label="Month">
+                    <input className="field" value={month} onChange={(event) => setMonth(event.target.value)} required />
+                </Field>
+                <Field label="Plan amount (K)">
+                    <input type="number" min="1" className="field" value={amount} onChange={(event) => setAmount(event.target.value)} required />
+                </Field>
+                <button className="btn-primary self-end" type="submit">Save plan</button>
+            </form>
+            {plans.map((plan) => (
+                <article key={plan.id} className="card flex items-center justify-between px-4 py-3">
+                    <div>
+                        <p className="font-display font-semibold">{plan.month} · {kwacha(plan.amount)}</p>
+                        <p className="text-sm text-slate">{plan.status}{plan.confirmed_at ? ` · ${when(plan.confirmed_at)}` : ''}</p>
+                    </div>
+                    {plan.status !== 'confirmed' && <button type="button" className="btn-copper !px-4 !py-2" onClick={() => confirm(plan.id)}>Confirm</button>}
+                </article>
+            ))}
+            <p className="text-xs text-slate">The figures are this month’s bookings, the wallet balance, and the plan saved for that month.</p>
+        </>
     );
 }
