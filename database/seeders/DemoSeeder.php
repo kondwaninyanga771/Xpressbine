@@ -11,6 +11,9 @@ use App\Models\Package;
 use App\Models\ProviderProfile;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Services\BookingService;
+use App\Services\EscrowService;
+use App\Services\RatingService;
 use Illuminate\Database\Seeder;
 
 class DemoSeeder extends Seeder
@@ -55,7 +58,8 @@ class DemoSeeder extends Seeder
             'user_id' => $chanda->id,
             'name' => 'Kabulonga Academy',
         ]);
-        Wallet::query()->create(['business_id' => $business->id]);
+        $wallet = Wallet::query()->create(['business_id' => $business->id]);
+        app(EscrowService::class)->topUp($wallet, $chanda, '20000', 'bank_transfer');
         BusinessSite::query()->create([
             'business_id' => $business->id,
             'name' => 'Kabulonga Campus',
@@ -187,6 +191,48 @@ class DemoSeeder extends Seeder
 
         $this->provider(
             user: [
+                'name' => 'Loveness Bwalya',
+                'email' => 'loveness.bwalya@example.com',
+                'phone' => '0962222005',
+                'area' => 'Matero',
+                'latitude' => -15.3850,
+                'longitude' => 28.2620,
+                'mobile_money_provider' => 'mtn_momo',
+                'mobile_money_number' => '0962222005',
+            ],
+            profile: [
+                'bio' => 'Carpenter. Doors, cupboards and small furniture repairs.',
+                'hourly_rate' => 160,
+                'verification_status' => VerificationStatus::Verified,
+                'verified_at' => now(),
+            ],
+            trades: ['carpentry'],
+            package: ['Door repair', 'carpentry', 500, 'Repair or rehang one door.'],
+        );
+
+        $this->provider(
+            user: [
+                'name' => 'Tina Mulenga',
+                'email' => 'tina.mulenga@example.com',
+                'phone' => '0972222006',
+                'area' => 'Woodlands',
+                'latitude' => -15.4280,
+                'longitude' => 28.3330,
+                'mobile_money_provider' => 'airtel_money',
+                'mobile_money_number' => '0972222006',
+            ],
+            profile: [
+                'bio' => 'Event planner for parties and small weddings in Lusaka.',
+                'hourly_rate' => 250,
+                'verification_status' => VerificationStatus::Verified,
+                'verified_at' => now(),
+            ],
+            trades: ['event-planning'],
+            package: ['Backyard party setup', 'event-planning', 2500, 'Setup for a home party of about 30 people.'],
+        );
+
+        $this->provider(
+            user: [
                 'name' => 'Oliver Nkhoma',
                 'email' => 'oliver.nkhoma@example.com',
                 'phone' => '0972222008',
@@ -203,6 +249,32 @@ class DemoSeeder extends Seeder
             trades: ['plumbing'],
             package: null,
         );
+
+        $this->seedCompletedJob();
+    }
+
+    private function seedCompletedJob(): void
+    {
+        $customer = User::query()->where('email', 'natasha.mwila@example.com')->firstOrFail();
+        $provider = User::query()->where('email', 'grace.tembo@example.com')->firstOrFail();
+        $package = Package::query()->where('title', 'Sink and tap repair')->firstOrFail();
+
+        $bookings = app(BookingService::class);
+        $booking = $bookings->createFromPackage($customer, $package, [
+            'scheduled_at' => now()->subDays(12),
+            'address' => 'House 12, Chilenje South',
+            'area' => 'Chilenje',
+            'notes' => 'Earlier visit for the same kitchen sink.',
+        ]);
+        $booking = app(EscrowService::class)->payWithMobileMoney($booking, $customer, 'mtn_momo', '0961111001');
+        $booking = $bookings->accept($booking, $provider);
+        $booking = $bookings->start($booking, $provider);
+        $booking = $bookings->complete($booking, $provider);
+        $booking = $bookings->confirm($booking, $customer);
+
+        $ratings = app(RatingService::class);
+        $ratings->rate($booking, $customer, 5, 'Arrived on time and fixed the leak.');
+        $ratings->rate($booking, $provider, 5, 'Clear instructions and the house was easy to work in.');
     }
 
     /**
